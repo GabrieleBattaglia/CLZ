@@ -215,6 +215,7 @@ Federico
 Felice
 Feliciano
 Ferdinando
+Fermo
 Fernando
 Ferruccio
 Filiberto
@@ -562,6 +563,7 @@ Teobaldo
 Teodoro
 Terenzio
 Thomas
+Tibaldo
 Tiberio
 Timoti
 Tino

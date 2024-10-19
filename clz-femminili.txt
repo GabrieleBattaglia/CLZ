@@ -82,6 +82,7 @@ Armanda
 Artemisia
 Asia
 Assunta
+Astrid
 Atena
 Augusta
 Aurelia
@@ -345,6 +346,7 @@ Guglielmina
 Guia
 Iaia
 Iana
+Iara
 Ida
 Idolina
 Igina
@@ -638,6 +640,7 @@ Rosita
 Rossana
 Rossella
 Rosvita
+Rubina
 Ruggera
 Sabina
 Sabrina

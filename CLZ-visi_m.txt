@@ -1,0 +1,68 @@
+Viso ovale dalla carnagione chiara, completamente sbarbato
+Volto squadrato e mascolino, barba corta e ben curata
+Viso tondo e giovanile, con leggera barba incolta (stubble)
+Faccia allungata (rettangolare), baffi folti stile chevron
+Viso a cuore con zigomi alti, pizzetto definito (goatee)
+Carnagione olivastra, barba piena di media lunghezza, aspetto curato
+Pelle abbronzata su un viso dai lineamenti marcati, sbarbato
+Volto pallido con qualche lentiggine sparsa, senza barba
+Viso segnato da rughe sulla fronte, aspetto maturo e distinto, baffi curati
+Zigomi pronunciati (viso a diamante), barba Van Dyke (pizzetto e baffi separati)
+Mento forte su viso quadrato, ombra di barba delle cinque (5 o'clock shadow)
+Carnagione scura e uniforme, baffi sottili a matita
+Viso affascinante con fossette sulle guance quando sorride, barba rada
+Pelle con segni di cicatrici da acne su un viso ovale, pizzetto
+Aspetto rude e vissuto (rugged), barba lunga e folta stile Garibaldi
+Volto piacevole, carnagione media, basette lunghe e folte
+Viso triangolare (base larga), completamente sbarbato, pelle liscia
+Carnagione tendente al rossastro (ruddy), baffi importanti a manubrio (handlebar)
+Viso segnato da una cicatrice sottile sulla guancia, barba incolta di qualche giorno
+Volto dai tratti forti, pelle con pori dilatati, pizzetto esteso (include baffi collegati)
+Aspetto distinto, tempie brizzolate, barba corta sale e pepe
+Carnagione giallastra (sallow), baffi spioventi a tricheco (walrus)
+Viso attraente, pelle levigata, barba corta e squadrata sui contorni (boxed beard)
+Volto con macchie dovute all'esposizione solare, sbarbato
+Viso con mento appuntito, baffi curati e mosca (soul patch) sotto il labbro inferiore
+Fronte ampia su viso ovale, barba che segue solo il mento (chin strap)
+Viso dai lineamenti dolci, pelle molto chiara, senza barba né baffi
+Aspetto giovanile, pelle senza imperfezioni, leggera barba bionda incolta
+Viso segnato da zampe di gallina accentuate attorno agli occhi, barba piena brizzolata
+Carnagione uniforme e curata, baffi a ferro di cavallo (horseshoe)
+Volto notevole (striking), zigomi alti, barba corta ma folta
+Pelle tendenzialmente grassa con effetto lucido sulla fronte, pizzetto classico
+Viso magro e allungato, baffi sottili e appuntiti stile Dalì
+Aspetto maturo e rassicurante, barba curata stile Old Dutch (piena, squadrata alla base)
+Viso con una piccola voglia (birthmark) sulla tempia, sbarbato
+Carnagione chiara con segni di couperose (rossore diffuso), barba incolta folta
+Volto simpatico e aperto, fossette evidenti, barba rada e bionda
+Mascella pronunciata e volitiva su viso quadrato, barba piena ma corta
+Viso con zone di pelle secca o screpolata, baffi sottili e curati
+Volto vissuto, rughe profonde attorno agli occhi e sulla fronte, barba lunga e leggermente incolta
+Aspetto affascinante e un po' misterioso, ombra di barba scura
+Carnagione olivastra e liscia, barba stile "anchor" (ancora)
+Viso regolare e classicamente bello, pelle impeccabile, completamente sbarbato
+Guance piene su viso tondo, basettoni folti collegati ai baffi (mutton chops con baffi)
+Viso con profonde rughe d'espressione, pizzetto curato e brizzolato
+Pelle lentigginosa su tutto il volto, senza barba
+Volto con lineamenti affilati e definiti, barba corta che sottolinea la mascella
+Carnagione molto scura, barba piena e curatissima stile Bandholz (lunga con baffi curati)
+Viso con fronte alta, barba rada solo sulla punta del mento
+Aspetto piacevole e dall'aria buona, barba castana di media lunghezza
+Pelle segnata da piccole cicatrici depresse (pockmarks), pizzetto Van Dyke ben curato
+Viso molto espressivo, rughe dinamiche attorno agli occhi, barba corta e pratica
+Fronte spaziosa, carnagione chiara, barba bionda corta
+Mento sfuggente, compensato da una barba corta e curata
+Viso scavato, zigomi sporgenti, barba di tre giorni
+Carnagione luminosa, aspetto sano, sbarbato
+Volto con mascella larga, barba incolta scura
+Pelle sensibile e arrossata dopo la rasatura
+Aspetto sereno e tranquillo, pizzetto rado
+Viso interessante, con leggera asimmetria, barba corta
+Carnagione ambrata, baffi folti ma curati
+Volto solare, pelle dorata, barba rada e bionda
+Aspetto severo, lineamenti duri, barba corta e scura
+Pelle liscia e tesa, senza barba, aspetto molto giovane
+Viso stanco con occhiaie segnate, barba incolta
+Carnagione pallida, barba nera e folta a contrasto
+Mento volitivo, fossetta sul mento, sbarbato
+Viso energico, pelle tonica, barba corta e dinamica

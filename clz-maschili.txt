@@ -484,6 +484,7 @@ Pietro
 Pino
 Pio
 Pompiglio
+Primitivo
 Primo
 Prospero
 Quasimodo
@@ -566,6 +567,7 @@ Teo
 Teobaldo
 Teodoro
 Terenzio
+Teresio
 Thomas
 Tibaldo
 Tiberio

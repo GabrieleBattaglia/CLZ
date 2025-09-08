@@ -21,6 +21,7 @@ Aida
 Aisha
 Alba
 Albarosa
+Alberica
 Alberta
 Albertina
 Alda
@@ -82,6 +83,7 @@ Arisa
 Armanda
 Artemisia
 Asia
+Asmara
 Assunta
 Astrid
 Atena
@@ -603,6 +605,7 @@ Pompea
 Portia
 Porzia
 Prima
+Principia
 Prisca
 Priscilla
 Rachele
@@ -737,6 +740,7 @@ Vera
 Verdiana
 Verena
 Veronica
+Vienna
 Vilma
 Vincenza
 Viola

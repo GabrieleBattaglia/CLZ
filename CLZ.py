@@ -2,12 +2,14 @@
 # Giugno 2017, inizio il porting a Python3
 # giugno 2024, spostato su Github
 # Aprile 2025, modifiche per caricamento .txt, gestione file, ordine memoria
+# Aggiornamento: Lettura avanzata TXT (divisione parole/frasi)
 
 import pickle
 import os # Importato per verificare l'esistenza dei file
+import string # Importiamo string per gestire facilmente la punteggiatura
 from GBUtils import dgt # Assumiamo che dgt gestisca l'input utente
 
-print ("Collezioni 1.8 - 5 aprile 2013 / 17 aprile 2025\n-- by Gabriele Battaglia")
+print ("Collezioni 1.9 - 5 aprile 2013 / 17 aprile 2025\n-- by Gabriele Battaglia")
 print ("\n- Nome della collezione: ", end="")
 collection_name_input = dgt(smax=40)
 collection_name_input = collection_name_input.lower()
@@ -31,32 +33,46 @@ try:
             collection_items = pickle.load(f_pickle_in)
         print(f"- Caricamento da {gbd_file_path} completato ({len(collection_items)} elementi).")
         loaded_from = 'gbd'
+        
     # Se .gbd non esiste, prova a caricare dal file .txt
     elif os.path.exists(txt_file_path):
         print(f"- File {gbd_file_path} non trovato.")
         print(f"- Caricamento di {txt_file_path} (testo) in corso...")
+        print("- Analisi del testo per estrazione parole...")
+        
         temp_items = set() # Usiamo un set per gestire duplicati iniziali
         try:
             # Apre il file txt in lettura con encoding utf-8
             with open(txt_file_path, "rt", encoding='utf-8') as f_text_in:
                 for line in f_text_in:
-                    # Processa ogni riga come un nuovo oggetto
-                    item = line.strip()
-                    if item: # Ignora righe vuote
-                         item = item.capitalize()
-                         temp_items.add(item)
+                    # NUOVA LOGICA:
+                    # 1. Suddivide la riga in parole basandosi sugli spazi
+                    words_in_line = line.split()
+                    
+                    for word in words_in_line:
+                        # 2. Rimuove punteggiatura (es. virgole, punti) dai bordi della parola
+                        # string.punctuation contiene tutti i simboli come !"#$%&'()*+,-./:;<=>?@[\]^_`{|}~
+                        clean_word = word.strip(string.punctuation)
+                        
+                        # 3. Se dopo la pulizia rimane qualcosa, lo aggiunge
+                        if clean_word:
+                            clean_word = clean_word.capitalize()
+                            temp_items.add(clean_word)
+                            
             # Converte il set in lista e ORDINA dopo caricamento da TXT
             collection_items = sorted(list(temp_items))
-            print(f"- Caricamento da {txt_file_path} completato. {len(collection_items)} elementi unici caricati e ordinati.")
+            print(f"- Caricamento da {txt_file_path} completato. {len(collection_items)} elementi unici estratti e ordinati.")
             loaded_from = 'txt'
         except Exception as e:
             print(f"\a\n- Errore durante la lettura di {txt_file_path}: {e}")
             collection_items = []
+            
     else:
         # Nessun file trovato, si crea una nuova collezione
         print(f"\a\n- Nessuna collezione ({gbd_file_path} o {txt_file_path}) trovata.")
         print(f"- Creazione di una nuova collezione '{collection_prefix}' in corso...")
         collection_items = []
+        
 except (pickle.UnpicklingError, IOError, EOFError) as e:
     print(f"\a\n\n- Errore durante il caricamento di {gbd_file_path}: {e}")
     print("- Potrebbe essere corrotto. Verrà creata una nuova collezione.")

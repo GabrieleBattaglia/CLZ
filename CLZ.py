@@ -3,13 +3,14 @@
 # giugno 2024, spostato su Github
 # Aprile 2025, modifiche per caricamento .txt, gestione file, ordine memoria
 # Aggiornamento: Lettura avanzata TXT (divisione parole/frasi)
+VERSION = "1.9"
 
 import pickle
 import os # Importato per verificare l'esistenza dei file
 import string # Importiamo string per gestire facilmente la punteggiatura
 from GBUtils import dgt # Assumiamo che dgt gestisca l'input utente
 
-print ("Collezioni 1.9 - 5 aprile 2013 / 17 aprile 2025\n-- by Gabriele Battaglia")
+print (f"Collezioni {VERSION} - 5 aprile 2013 / 17 aprile 2025\n-- by Gabriele Battaglia")
 print ("\n- Nome della collezione: ", end="")
 collection_name_input = dgt(smax=40)
 collection_name_input = collection_name_input.lower()

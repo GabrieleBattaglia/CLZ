@@ -1,334 +1,426 @@
-# Collezioni Carica e salva su disco una raccolta di nomi univoci.
-# Giugno 2017, inizio il porting a Python3
-# giugno 2024, spostato su Github
-# Aprile 2025, modifiche per caricamento .txt, gestione file, ordine memoria
-# Aggiornamento: Lettura avanzata TXT (divisione parole/frasi)
-VERSION = "1.9"
+# CLZ, Collezioni. Raccolta di nomi univoci salvata su disco.
+# Giugno 2017, inizio del porting a Python 3.
+# Giugno 2024, spostato su GitHub.
+# Aprile 2025, caricamento da testo, gestione file, ordine di memoria.
+# 7 settembre 2026, versione 2.0.0: archivio in JSON, salvataggio atomico
+#   dopo ogni modifica, comandi sicuri e messaggi accessibili.
+# Autori: Gabriele Battaglia (IZ4APU) & ClaudIA (Claude Opus 5, modalita' auto)
 
+import json
+import os
 import pickle
-import os # Importato per verificare l'esistenza dei file
-import string # Importiamo string per gestire facilmente la punteggiatura
-from GBUtils import dgt # Assumiamo che dgt gestisca l'input utente
+import string
+import sys
 
-print (f"Collezioni {VERSION} - 5 aprile 2013 / 17 aprile 2025\n-- by Gabriele Battaglia")
-print ("\n- Nome della collezione: ", end="")
-collection_name_input = dgt(smax=40)
-collection_name_input = collection_name_input.lower()
-collection_name_input = collection_name_input.strip()
-collection_prefix = "CLZ-" + collection_name_input
-gbd_file_path = collection_prefix + ".gbd"
-txt_file_path = collection_prefix + ".txt"
+from GBUtils import Acusticator, dgt, manuale, menu
 
-collection_items = [] # Inizializza la lista vuota
+VERSIONE = "2.0.0"
+RELEASE_DATE = "7 settembre 2026"
 
-# --- Blocco di Caricamento Modificato ---
-# Priorità al file .gbd, poi al .txt
-print(f"\n- Ricerca collezione '{collection_prefix}'...")
-loaded_from = None
-try:
-    # Prova a caricare dal file .gbd (pickle)
-    if os.path.exists(gbd_file_path):
-        print(f"- Caricamento di {gbd_file_path} (pickle) in corso...")
-        with open(gbd_file_path, "rb") as f_pickle_in:
-            # Carica la lista così com'è (ordine preservato da salvataggi precedenti)
-            collection_items = pickle.load(f_pickle_in)
-        print(f"- Caricamento da {gbd_file_path} completato ({len(collection_items)} elementi).")
-        loaded_from = 'gbd'
-        
-    # Se .gbd non esiste, prova a caricare dal file .txt
-    elif os.path.exists(txt_file_path):
-        print(f"- File {gbd_file_path} non trovato.")
-        print(f"- Caricamento di {txt_file_path} (testo) in corso...")
-        print("- Analisi del testo per estrazione parole...")
-        
-        temp_items = set() # Usiamo un set per gestire duplicati iniziali
-        try:
-            # Apre il file txt in lettura con encoding utf-8
-            with open(txt_file_path, "rt", encoding='utf-8') as f_text_in:
-                for line in f_text_in:
-                    # NUOVA LOGICA:
-                    # 1. Suddivide la riga in parole basandosi sugli spazi
-                    words_in_line = line.split()
-                    
-                    for word in words_in_line:
-                        # 2. Rimuove punteggiatura (es. virgole, punti) dai bordi della parola
-                        # string.punctuation contiene tutti i simboli come !"#$%&'()*+,-./:;<=>?@[\]^_`{|}~
-                        clean_word = word.strip(string.punctuation)
-                        
-                        # 3. Se dopo la pulizia rimane qualcosa, lo aggiunge
-                        if clean_word:
-                            clean_word = clean_word.capitalize()
-                            temp_items.add(clean_word)
-                            
-            # Converte il set in lista e ORDINA dopo caricamento da TXT
-            collection_items = sorted(list(temp_items))
-            print(f"- Caricamento da {txt_file_path} completato. {len(collection_items)} elementi unici estratti e ordinati.")
-            loaded_from = 'txt'
-        except Exception as e:
-            print(f"\a\n- Errore durante la lettura di {txt_file_path}: {e}")
-            collection_items = []
-            
+# I percorsi sono ancorati alla cartella del programma, non a quella di
+# lavoro, cosi' le collezioni sono le stesse da qualunque cartella si parta.
+if getattr(sys, "frozen", False):
+    BASE_DIR = os.path.dirname(os.path.abspath(sys.executable))
+else:
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# Caratteri che Windows non ammette nei nomi di file.
+VIETATI = '<>:"/\\|?*'
+
+# Quanti elementi si elencano per volta e quanti se ne mostrano
+# attorno a un duplicato.
+PAGINA = 25
+CONTORNO = 2
+
+COMANDI = {
+    ".eli": "Elimina un elemento",
+    ".lst": "Elenca gli elementi",
+    ".men": "Rilegge questo menu",
+    ".txt": "Salva la lista ordinata in testo",
+    ".uni": "Unisce un'altra collezione",
+    ".gui": "Guida di CLZ",
+}
+
+GUIDA = """Guida di CLZ, Collezioni.
+
+Che cosa fa
+CLZ tiene una raccolta di nomi univoci: parole,
+cognomi, sigle, quello che vuoi. Ogni elemento
+compare una volta sola, e la collezione conserva
+l'ordine in cui l'hai costruita.
+
+Come si usa
+Al prompt digiti un elemento e premi INVIO: se
+non c'e' viene aggiunto in fondo, se c'e' gia'
+CLZ te lo dice, con la posizione e gli elementi
+che gli stanno attorno.
+Una riga vuota chiude il programma.
+
+I comandi cominciano con un punto e sono:
+.ELI elimina un elemento indicando la sua
+     posizione attuale;
+.LST elenca gli elementi, venticinque per volta;
+.MEN rilegge l'elenco dei comandi;
+.TXT salva la collezione ordinata in un file di
+     testo, accanto a quello della collezione;
+.UNI unisce un'altra collezione a questa. Il
+     risultato viene riordinato alfabeticamente,
+     quindi l'ordine di inserimento va perduto;
+.GUI mostra questa guida.
+Un comando scritto male non viene mai aggiunto
+alla collezione: CLZ lo segnala e basta.
+
+Dove finiscono i dati
+Ogni collezione vive in un file CLZ-nome.json
+accanto al programma. Il salvataggio avviene
+dopo ogni modifica, quindi non c'e' niente da
+perdere chiudendo la finestra.
+Della versione precedente resta sempre una copia
+con estensione .bak.
+
+Le vecchie collezioni
+I file .gbd delle versioni fino alla 1.9 erano in
+formato pickle, che all'apertura esegue il codice
+contenuto nel file. Alla prima apertura CLZ li
+converte in JSON una volta sola e li lascia dove
+sono, senza toccarli.
+"""
+
+
+def suona(nome):
+    """Fa sentire un preset della collezione condivisa.
+    Se la scheda audio non c'e' o non risponde, il programma prosegue in
+    silenzio: un suono mancato non e' una ragione per fermare il lavoro.
+    """
+    try:
+        Acusticator.play(nome)
+    except (OSError, RuntimeError, ImportError) as e:
+        print(f"Audio non disponibile: {e}", file=sys.stderr)
+
+
+def nome_valido(nome):
+    """Ripulisce il nome della collezione dai caratteri vietati"""
+    pulito = "".join(c for c in nome if c not in VIETATI).strip()
+    return pulito
+
+
+def percorsi(nome):
+    """Restituisce i quattro percorsi della collezione che ha quel nome"""
+    prefisso = os.path.join(BASE_DIR, "CLZ-" + nome)
+    return {
+        "json": prefisso + ".json",
+        "bak": prefisso + ".json.bak",
+        "tmp": prefisso + ".json.tmp",
+        "gbd": prefisso + ".gbd",
+        "txt": prefisso + ".txt",
+    }
+
+
+def lista_di_stringhe(dati):
+    """Dice se cio' che si e' letto e' davvero una lista di stringhe"""
+    return isinstance(dati, list) and all(isinstance(x, str) for x in dati)
+
+
+def leggi_json(percorso):
+    """Legge una collezione in JSON.
+    Restituisce la lista, oppure None se il file c'e' ma non si legge.
+    """
+    try:
+        with open(percorso, "r", encoding="utf-8") as f:
+            dati = json.load(f)
+    except (OSError, ValueError) as e:
+        print("Non riesco a leggere la collezione.")
+        print(f"Motivo: {e}")
+        return None
+    if not lista_di_stringhe(dati):
+        print("Il file non contiene una collezione:")
+        print("dentro non c'e' un elenco di parole.")
+        return None
+    return dati
+
+
+def leggi_gbd(percorso):
+    """Legge una vecchia collezione in formato pickle.
+    Restituisce la lista, oppure None se non si riesce a leggerla.
+    """
+    try:
+        with open(percorso, "rb") as f:
+            dati = pickle.load(f)
+    except (OSError, ValueError, pickle.UnpicklingError, EOFError, AttributeError) as e:
+        print("Non riesco a leggere la vecchia collezione.")
+        print(f"Motivo: {e}")
+        return None
+    if not lista_di_stringhe(dati):
+        print("Il vecchio file non contiene un elenco")
+        print("di parole.")
+        return None
+    return dati
+
+
+def leggi_txt(percorso):
+    """Estrae le parole da un file di testo, una per ogni sequenza di
+    caratteri separata da spazi, ripulita dalla punteggiatura ai bordi.
+    Restituisce la lista ordinata, oppure None se il file non si legge.
+    """
+    trovate = set()
+    try:
+        with open(percorso, "r", encoding="utf-8") as f:
+            for riga in f:
+                for parola in riga.split():
+                    pulita = parola.strip(string.punctuation)
+                    if pulita:
+                        trovate.add(pulita.capitalize())
+    except (OSError, UnicodeDecodeError) as e:
+        print("Non riesco a leggere il file di testo.")
+        print(f"Motivo: {e}")
+        return None
+    return sorted(trovate)
+
+
+def salva(elementi, vie):
+    """Scrive la collezione in JSON.
+    Passa da un file temporaneo e poi lo mette al posto dell'archivio con
+    os.replace, che e' atomico: se qualcosa va storto la versione
+    precedente resta intatta, e viene comunque conservata come .bak.
+    Restituisce True se il salvataggio e' riuscito.
+    """
+    try:
+        with open(vie["tmp"], "w", encoding="utf-8") as f:
+            json.dump(elementi, f, ensure_ascii=False, indent=1)
+            f.flush()
+            os.fsync(f.fileno())
+        if os.path.exists(vie["json"]):
+            os.replace(vie["json"], vie["bak"])
+        os.replace(vie["tmp"], vie["json"])
+    except OSError as e:
+        suona("ronzio_di_errore_di_sistema")
+        print(f"Errore nel salvataggio: {e}")
+        print("La collezione precedente non e' stata")
+        print("toccata.")
+        return False
+    return True
+
+
+def carica(vie):
+    """Trova e carica la collezione.
+    Prova nell'ordine il JSON, la vecchia collezione pickle da convertire e
+    il file di testo. Se un file esiste ma non si legge, si ferma e
+    restituisce None: cosi' nessun archivio illeggibile viene sostituito da
+    una collezione vuota.
+    """
+    if os.path.exists(vie["json"]):
+        print("Carico la collezione.")
+        return leggi_json(vie["json"])
+    if os.path.exists(vie["gbd"]):
+        print("Trovata una collezione vecchia.")
+        print("La converto nel nuovo formato.")
+        elementi = leggi_gbd(vie["gbd"])
+        if elementi is None:
+            return None
+        if not salva(elementi, vie):
+            return None
+        print(f"Convertiti {len(elementi)} elementi.")
+        print("Il vecchio file resta dov'e', intatto.")
+        return elementi
+    if os.path.exists(vie["txt"]):
+        print("Trovato un file di testo.")
+        print("Ne estraggo le parole.")
+        elementi = leggi_txt(vie["txt"])
+        if elementi is None:
+            return None
+        print(f"Estratte {len(elementi)} parole diverse,")
+        print("in ordine alfabetico.")
+        return elementi
+    print("Nessuna collezione con questo nome.")
+    print("Ne comincio una nuova.")
+    return []
+
+
+def elenca(elementi):
+    """Mostra una porzione della collezione, nell'ordine attuale"""
+    if not elementi:
+        print("La collezione e' vuota.")
+        return
+    totale = len(elementi)
+    print(f"La collezione contiene {totale} elementi.")
+    primo = dgt(f"Primo elemento, da 1 a {totale}: ", kind="i", imin=1, imax=totale, default=1)
+    ultimo_pre = min(primo + PAGINA - 1, totale)
+    ultimo = dgt(f"Ultimo elemento, da {primo} a {totale}: ", kind="i", imin=primo, imax=totale, default=ultimo_pre)
+    if ultimo - primo + 1 > PAGINA:
+        ultimo = primo + PAGINA - 1
+        print(f"Ne mostro {PAGINA} per volta.")
+    print(f"Elementi da {primo} a {ultimo}:")
+    for j in range(primo - 1, ultimo):
+        print(f"{j + 1}. {elementi[j]}")
+
+
+def elimina(elementi, vie):
+    """Toglie un elemento indicato per posizione attuale"""
+    if not elementi:
+        print("La collezione e' vuota.")
+        return
+    totale = len(elementi)
+    n = dgt(f"Quale elimino, da 1 a {totale}? ", kind="i", imin=1, imax=totale)
+    tolto = elementi.pop(n - 1)
+    print(f"Eliminato {n}, {tolto}.")
+    print(f"Restano {len(elementi)} elementi.")
+    suona("timbratura")
+    salva(elementi, vie)
+
+
+def unisci(elementi, vie):
+    """Aggiunge a questa collezione il contenuto di un'altra.
+    Il risultato viene riordinato alfabeticamente, come nelle versioni
+    precedenti: l'ordine di inserimento della collezione aperta va perduto.
+    """
+    nome = nome_valido(dgt("Nome della collezione da unire: ", kind="s", smin=1, smax=40).lower())
+    if not nome:
+        print("Nome non valido, non faccio nulla.")
+        return elementi
+    altre_vie = percorsi(nome)
+    if os.path.exists(altre_vie["json"]):
+        altri = leggi_json(altre_vie["json"])
+    elif os.path.exists(altre_vie["gbd"]):
+        altri = leggi_gbd(altre_vie["gbd"])
     else:
-        # Nessun file trovato, si crea una nuova collezione
-        print(f"\a\n- Nessuna collezione ({gbd_file_path} o {txt_file_path}) trovata.")
-        print(f"- Creazione di una nuova collezione '{collection_prefix}' in corso...")
-        collection_items = []
-        
-except (pickle.UnpicklingError, IOError, EOFError) as e:
-    print(f"\a\n\n- Errore durante il caricamento di {gbd_file_path}: {e}")
-    print("- Potrebbe essere corrotto. Verrà creata una nuova collezione.")
-    collection_items = []
-except Exception as e: # Cattura altre eccezioni impreviste
-    print(f"\a\n\n- Errore imprevisto durante il caricamento: {e}")
-    collection_items = []
+        suona("avviso_di_sistema")
+        print(f"La collezione {nome} non esiste.")
+        return elementi
+    if altri is None:
+        suona("ronzio_di_errore_di_sistema")
+        print("Unione annullata.")
+        return elementi
+    prima = len(elementi)
+    insieme = set(elementi)
+    insieme.update(altri)
+    uniti = sorted(insieme)
+    aggiunti = len(uniti) - prima
+    print(f"Elementi prima: {prima}.")
+    print(f"Nella collezione unita: {len(altri)}.")
+    print(f"Aggiunti perche' nuovi: {aggiunti}.")
+    print(f"Totale adesso: {len(uniti)}.")
+    print("La collezione e' stata riordinata in")
+    print("ordine alfabetico.")
+    suona("conferma")
+    salva(uniti, vie)
+    return uniti
 
-# --- Funzioni ---
 
-def save_to_txt():
-    """Salva la collezione corrente ORDINATA in un file .txt con encoding UTF-8."""
-    if not collection_items:
-        print("\n- La collezione è vuota, nessun file .txt salvato.")
+def salva_testo(elementi, vie):
+    """Scrive la collezione ordinata in un file di testo"""
+    if not elementi:
+        print("La collezione e' vuota, non salvo nulla.")
         return
-    # Crea una COPIA ORDINATA della lista per il salvataggio
-    sorted_items_for_txt = sorted(collection_items)
     try:
-        with open(txt_file_path, "wt", encoding='utf-8') as f_text_out:
-            for item in sorted_items_for_txt:
-                f_text_out.write(item + "\n")
-        print(f"\n- File: {txt_file_path} salvato ({len(sorted_items_for_txt)} elementi, ordinati).")
-    except IOError as e:
-        print(f"\a\n- Errore durante il salvataggio di {txt_file_path}: {e}")
-    except Exception as e:
-        print(f"\a\n- Errore imprevisto durante il salvataggio TXT: {e}")
-
-def show_menu():
-    '''Scrive il menu delle scelte'''
-    print ("\n----Menu----")
-    print ("Inserisci questi comandi per ottenere le azioni corrispondenti.")
-    print ("\tNota: i comandi vanno scritti in maiuscolo e preceduti da un punto")
-    print (" - .ELI = Elimina un elemento dalla collezione (in base alla posizione attuale)")
-    print (" - .UNI = Unisce una seconda collezione a quella aperta (risultato ordinato)")
-    print (" - .LST = Lista degli oggetti (nell'ordine attuale)")
-    print (" - .MEN = Visualizza questo menu")
-    print (" - .TXT = Salva la lista ordinata in testo")
-    print (" - Inserisci una riga vuota per concludere.")
-
-def process_command(command):
-    """Processa i comandi speciali inseriti dall'utente."""
-    global collection_items # Necessario per modificare la lista globale
-
-    if command == ".TXT":
-        save_to_txt()
-        return True
-    if command == ".MEN":
-        show_menu()
-        return True
-    if command == ".LST":
-        list_items()
-        return True
-    if command == ".ELI":
-        delete_item()
-        return True
-    if command == ".UNI":
-        unite_collection()
-        # Nota: unite_collection ora ordina collection_items
-        return True
-    return False # Non era un comando riconosciuto
-
-def list_items():
-    """Mostra una porzione della lista di elementi nell'ordine corrente."""
-    if not collection_items:
-        print("- La collezione è vuota.")
+        with open(vie["txt"], "w", encoding="utf-8") as f:
+            f.writelines(x + "\n" for x in sorted(elementi))
+    except OSError as e:
+        suona("ronzio_di_errore_di_sistema")
+        print(f"Errore nel salvataggio del testo: {e}")
         return
-
-    total_items = len(collection_items)
-    print(f"- La collezione contiene {total_items} elementi (ordine attuale).")
-
-    # Gestione input con valori di default sensati
-    try:
-        start_index = dgt(f"Elemento iniziale (1-{total_items}, default 1): ", "i", default=1)
-        end_index = dgt(f"Elemento finale ({start_index}-{total_items}, default {min(start_index + 24, total_items)}): ", "i", default=min(start_index + 24, total_items))
-    except ValueError:
-        print("\a- Input numerico non valido.")
-        return
-
-    # Validazione e correzione indici (base 0 internamente)
-    start_index = max(0, start_index - 1)
-    end_index = min(total_items - 1, end_index - 1)
-    start_index = min(start_index, end_index) # Assicura start <= end
-
-    # Limita il numero di elementi visualizzati a 25 per volta
-    if end_index - start_index > 24:
-        end_index = start_index + 24
-        print("- Visualizzazione limitata a 25 elementi.")
-
-    print (f"\nLista oggetti da {start_index + 1} a {end_index + 1} (ordine attuale):")
-    for j in range(start_index, end_index + 1):
-        # Gestisce possibile errore se la lista viene modificata concorrentemente (improbabile qui)
-        try:
-            print (f"{j + 1}. {collection_items[j]}")
-        except IndexError:
-            print(f"{j+1}. Errore: indice fuori range")
-            break # Interrompe se l'indice non è più valido
-    print ("\n")
+    print(f"Salvati {len(elementi)} elementi in testo,")
+    print("in ordine alfabetico.")
+    suona("conferma")
 
 
-def delete_item():
-    """Elimina un elemento dalla collezione specificando il numero (posizione attuale)."""
-    global collection_items
-    if not collection_items:
-        print("- La collezione è vuota, impossibile eliminare.")
-        return
+def mostra_duplicato(elementi, posizione):
+    """Dice dove si trova un elemento gia' presente e cosa gli sta attorno"""
+    totale = len(elementi)
+    da = max(0, posizione - CONTORNO)
+    a = min(totale - 1, posizione + CONTORNO)
+    percento = (posizione + 1) * 100 / totale
+    print(f"Gia' presente alla posizione {posizione + 1}")
+    print(f"su {totale}, cioe' al {percento:.1f} per cento.")
+    intorno = []
+    for j in range(da, a + 1):
+        if j == posizione:
+            intorno.append(f"({elementi[j]})")
+        else:
+            intorno.append(elementi[j])
+    print(", ".join(intorno) + ".")
 
-    total_items = len(collection_items)
-    try:
-        item_number = dgt(f"Numero oggetto da eliminare (1-{total_items}, posizione attuale)? ", "i")
-    except ValueError:
-        print("\a- Input numerico non valido.")
-        return
 
-    # Validazione indice (base 0 internamente)
-    index_to_delete = item_number - 1
-    if 0 <= index_to_delete < total_items:
-        item_to_delete = collection_items[index_to_delete]
-        print(f"Elimino: {item_number}. {item_to_delete}")
-        del collection_items[index_to_delete]
-        # La lista mantiene il nuovo ordine dopo 'del'
+def esegui_comando(comando, elementi, vie):
+    """Esegue un comando che comincia per punto.
+    Restituisce la collezione, che i comandi possono avere cambiato, e
+    True se il comando era riconosciuto.
+    """
+    if comando == ".txt":
+        salva_testo(elementi, vie)
+    elif comando == ".men":
+        menu(d=COMANDI, show_only=True)
+    elif comando == ".gui":
+        manuale(testo=GUIDA, nome="Guida di CLZ")
+    elif comando == ".lst":
+        elenca(elementi)
+    elif comando == ".eli":
+        elimina(elementi, vie)
+    elif comando == ".uni":
+        elementi = unisci(elementi, vie)
     else:
-        print(f"\a- Numero oggetto non valido. Deve essere tra 1 e {total_items}.")
+        return elementi, False
+    return elementi, True
 
-def unite_collection():
-    """Unisce un'altra collezione (da file .gbd) e ORDINA il risultato."""
-    global collection_items
-    print ("Nome della collezione da aggiungere?", end="")
-    other_collection_name = dgt(smax=40)
-    other_collection_name = other_collection_name.lower().strip()
-    other_collection_prefix = "CLZ-" + other_collection_name
-    other_gbd_path = other_collection_prefix + ".gbd"
 
-    if not os.path.exists(other_gbd_path):
-        print(f"\a\n\n- La collezione {other_gbd_path} non esiste... Operazione annullata")
+def chiedi_nome():
+    """Chiede il nome della collezione e lo restituisce ripulito"""
+    while True:
+        nome = nome_valido(dgt("Nome della collezione: ", kind="s", smin=1, smax=40).lower())
+        if nome:
+            return nome
+        suona("avviso_di_sistema")
+        print("Il nome non puo' essere vuoto e non puo'")
+        print("contenere questi caratteri:")
+        print(VIETATI)
+
+
+def main():
+    print(f"CLZ, Collezioni, versione {VERSIONE}")
+    print(f"del {RELEASE_DATE}.")
+    print("di Gabriele Battaglia.")
+    print("Raccoglie nomi univoci e li tiene su disco.")
+    suona("partenza")
+    nome = chiedi_nome()
+    vie = percorsi(nome)
+    elementi = carica(vie)
+    if elementi is None:
+        suona("ronzio_di_errore_di_sistema")
+        print("CLZ si ferma qui per non rischiare di")
+        print("rovinare la collezione. Non ho scritto")
+        print("niente.")
+        print(f"Il file e': {vie['json']}")
+        if os.path.exists(vie["bak"]):
+            print("C'e' una copia precedente con estensione")
+            print("punto bak: per usarla, rinominala dopo")
+            print("aver messo al sicuro quella rotta.")
         return
+    print(f"Elementi in collezione: {len(elementi)}.")
+    menu(d=COMANDI, show_only=True)
+    print("Una riga vuota chiude il programma.")
+    while True:
+        voce = dgt(f"Elemento {len(elementi) + 1}: ", kind="s", smin=0, smax=256).strip()
+        if not voce:
+            break
+        if voce.startswith("."):
+            elementi, riconosciuto = esegui_comando(voce.lower(), elementi, vie)
+            if not riconosciuto:
+                suona("avviso_di_sistema")
+                print(f"{voce} non e' un comando.")
+                print("Punto MEN per rileggere l'elenco.")
+            continue
+        nuovo = voce.capitalize()
+        if nuovo in elementi:
+            suona("avviso_di_sistema")
+            mostra_duplicato(elementi, elementi.index(nuovo))
+            continue
+        elementi.append(nuovo)
+        print(f"{nuovo}, aggiunto alla posizione {len(elementi)}.")
+        suona("timbratura")
+        salva(elementi, vie)
+    print(f"Collezione {nome} chiusa.")
+    print(f"Elementi salvati: {len(elementi)}.")
+    suona("conferma")
 
-    try:
-        print(f"- Caricamento di {other_gbd_path} in corso...")
-        with open(other_gbd_path, "rb") as f_other_pickle:
-            other_items = pickle.load(f_other_pickle)
-        print("- Caricamento completato con successo.")
 
-        original_count = len(collection_items)
-        new_items_count = len(other_items)
-
-        # Unione efficiente usando set per rimuovere duplicati
-        combined_set = set(collection_items)
-        combined_set.update(other_items)
-
-        # Aggiorna la lista globale e la ORDINA
-        collection_items = sorted(list(combined_set))
-
-        added_count = len(collection_items) - original_count
-        final_count = len(collection_items)
-
-        print(f"Elementi presenti prima: {original_count}, elementi da collezione unita: {new_items_count}.")
-        print(f"Elementi unici aggiunti: {added_count}. Elementi totali ora (ordinati): {final_count}.")
-
-    except (pickle.UnpicklingError, IOError, EOFError) as e:
-        print(f"\a\n- Errore durante il caricamento di {other_gbd_path}: {e}")
-    except Exception as e:
-        print(f"\a\n- Errore imprevisto durante l'unione: {e}")
-
-
-# --- Ciclo Principale ---
-show_menu()
-
-while True: # Ciclo principale
-    current_count = len(collection_items)
-    # --- Prompt Ripristinato ---
-    print (f"Oggetto {current_count + 1}: ", end="")
-    user_input = dgt() # Legge l'input utente
-
-    # Controlla se è un comando
-    if user_input.startswith('.'):
-        if process_command(user_input.upper()):
-            continue # Se era un comando valido, ricomincia il ciclo
-
-    # Se l'input è vuoto, termina il ciclo
-    if not user_input:
-        break
-
-    # Processa l'input come un nuovo elemento
-    new_item = user_input.strip().capitalize()
-
-    if new_item == "": # Se dopo strip/capitalize è vuoto, ignora
-         # Non stampo nulla per input vuoto processato
-         continue
-
-    # Controlla duplicati nella lista attuale (non ordinata)
-    if new_item in collection_items:
-        try:
-            # Trova l'indice della prima occorrenza nella lista attuale
-            item_index = collection_items.index(new_item)
-            ins = len(collection_items) # Dimensione attuale
-
-            # --- Logica Duplicati Ripristinata ---
-            i = item_index # Rinomino per usare la logica originale
-            if i < 2:
-                j1 = 0
-                if i > ins - 3: # Verifica se l'indice è vicino alla fine
-                    j2 = ins - 1
-                else:
-                    j2 = i + 2
-            elif i > ins - 3:
-                j2 = ins - 1
-                j1 = i - 2
-            else:
-                j1 = i - 2
-                j2 = i + 2
-
-            # Correzione per assicurare che j2 non superi l'indice massimo
-            j2 = min(j2, ins - 1)
-            # Correzione per assicurare che j1 non sia negativo
-            j1 = max(0, j1)
-
-            print(f"Elemento già presente in posizione {i + 1} ({float(i + 1) * 100 / ins:.2f}%)")
-            output_parts = []
-            for j in range(j1, j2 + 1):
-                 # Assicurati che j sia un indice valido prima di accedere a collection_items[j]
-                 if 0 <= j < len(collection_items):
-                     if i == j:
-                         output_parts.append(f"({collection_items[j]}).")
-                     else:
-                         output_parts.append(f"{collection_items[j]}")
-                 else:
-                     # Questo non dovrebbe accadere con le correzioni j1/j2, ma per sicurezza
-                     print(f"Errore indice j={j} fuori range")
-
-            print(", ".join(output_parts))
-            print("\n")
-            # --- Fine Logica Duplicati Ripristinata ---
-
-        except ValueError:
-             print(f"- '{new_item}' trovato con 'in' ma non con 'index'. Raro.")
-        except Exception as e:
-             print(f"- Errore nella gestione duplicato: {e}")
-        continue # Passa alla prossima iterazione senza aggiungere
-
-    # Aggiunge il nuovo elemento alla FINE della lista (ordine di inserimento)
-    collection_items.append(new_item)
-    # --- Rimosso collection_items.sort() ---
-    print(f"- '{new_item}' aggiunto in posizione {len(collection_items)}. Totale: {len(collection_items)}")
-    # Non serve 'continue' qui, il ciclo riparte
-
-# --- Salvataggio Finale ---
-# Salva la lista nell'ordine in cui si trova in memoria (ordine inserimento / post-UNI)
-print(f"\n- Salvataggio finale della collezione in {gbd_file_path}...")
-try:
-    with open(gbd_file_path, "wb") as f_pickle_out:
-        pickle.dump(collection_items, f_pickle_out, protocol=pickle.HIGHEST_PROTOCOL)
-    print(f"- Salvataggio completato ({len(collection_items)} elementi, ordine attuale).")
-except IOError as e:
-    print(f"\a\n- Errore durante il salvataggio finale di {gbd_file_path}: {e}")
-except Exception as e:
-    print(f"\a\n- Errore imprevisto durante il salvataggio finale: {e}")
-
-print("\nArrivederci.")
+if __name__ == "__main__":
+    main()
